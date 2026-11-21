@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HANDOGRAM // Spatial Gesture & Vision Studio</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap');
+
+    :root {
+      --bg: #03060c;
+      --glass: rgba(9, 17, 30, 0.80);
+      --cyan: #00f3ff;
+      --gold: #ffbe0b;
+      --pink: #ff007f;
+      --green: #00ff9d;
+      --border: rgba(0, 243, 255, 0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background:
+        radial-gradient(circle at 15% 15%, rgba(0, 243, 255, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(255, 0, 127, 0.08) 0%, transparent 40%),
+        linear-gradient(180deg, #040812 0%, #020408 100%);
+      color: #e6f7ff;
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 243, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 243, 255, 0.04) 1px, transparent 1px);
+      background-size: 38px 38px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.14), inset 0 0 15px rgba(0, 243, 255, 0.06);
+    }
+
+    .logo-wrap { display: flex; align-items: center; gap: 12px; }
+    .holo-core {
+      width: 28px; height: 28px; border-radius: 8px;
+      transform: rotate(45deg);
+      border: 3px solid var(--cyan);
+      box-shadow: 0 0 14px var(--cyan), inset 0 0 8px var(--cyan);
+      animation: pulse 2s infinite alternate;
+    }
+    @keyframes pulse { from { transform: rotate(45deg) scale(0.92); opacity: 0.85; } to { transform: rotate(45deg) scale(1.05); opacity: 1; } }
+
+    .title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      background: linear-gradient(90deg, #00f3ff, #ffffff, #00ff9d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle-tag {
+      font-size: 0.72rem;
+      letter-spacing: 1.5px;
+      color: #7cc4e8;
+      font-weight: 700;
+    }
+
+    .mode-switcher {
+      display: flex;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 5px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 243, 255, 0.2);
+    }
+
+    .mode-btn {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #8cb8d8;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mode-btn.active {
+      background: rgba(0, 243, 255, 0.2);
+      color: #fff;
+      border-color: var(--cyan);
+      box-shadow: 0 0 14px rgba(0, 243, 255, 0.35);
+    }
+
+    .telemetry-bar { display: flex; gap: 10px; }
+    .pill {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      background: rgba(0, 243, 255, 0.08);
+      border: 1px solid var(--border);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 370px;
+      gap: 14px;
+      flex: 1;
+    }
+
+    .viewport {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid var(--border);
+      box-shadow: 0 0 35px rgba(0, 243, 255, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .viewport img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .scanline {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 50%, rgba(0, 243, 255, 0.03) 51%);
+      background-size: 100% 4px;
+      pointer-events: none;
+    }
+    .bracket {
+      position: absolute;
+      width: 34px; height: 34px;
+      border: 3px solid var(--cyan);
+      pointer-events: none;
+      filter: drop-shadow(0 0 6px var(--cyan));
+    }
+    .tl { top: 14px; left: 14px; border-right: none; border-bottom: none; }
+    .tr { top: 14px; right: 14px; border-left: none; border-bottom: none; }
+    .bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
+    .br { bottom: 14px; right: 14px; border-left: none; border-top: none; }
+
+    .floating-hud-tag {
+      position: absolute;
+      top: 16px;
+      left: 60px;
+      background: rgba(4, 10, 20, 0.78);
+      border: 1px solid var(--cyan);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 1.5px;
+      color: var(--cyan);
+    }
+
+    .deck { display: flex; flex-direction: column; gap: 11px; }
+
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 15px;
+      backdrop-filter: blur(10px);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 9px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 1.4px;
+      color: #7cc4e8;
+    }
+
+    .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+    .dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      transition: 0.18s;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+    .dot:hover { transform: scale(1.16); border-color: #fff; box-shadow: 0 0 14px currentColor; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .cyber-btn {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(0, 243, 255, 0.1);
+      color: #e6f7ff;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .cyber-btn:hover { background: rgba(0, 243, 255, 0.26); box-shadow: 0 0 12px rgba(0, 243, 255, 0.25); }
+    .cyber-btn.gold { border-color: rgba(255, 190, 11, 0.5); background: rgba(255, 190, 11, 0.14); color: #ffe599; }
+    .cyber-btn.gold.on { background: rgba(255, 190, 11, 0.38); border-color: var(--gold); box-shadow: 0 0 14px rgba(255, 190, 11, 0.4); }
+    .cyber-btn.danger { border-color: rgba(255, 0, 127, 0.5); background: rgba(255, 0, 127, 0.14); color: #ffb3d9; }
+    .cyber-btn.danger:hover { background: rgba(255, 0, 127, 0.32); }
+
+    .guide { font-size: 0.82rem; line-height: 1.55; color: #b5d8f0; }
+    .guide span { color: var(--cyan); font-weight: 700; }
+
+    .console {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      backdrop-filter: blur(12px);
+    }
+    .console-left { flex: 1; }
+    .console-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.68rem;
+      letter-spacing: 1.6px;
+      color: #7cc4e8;
+      margin-bottom: 4px;
+    }
+    #transcriptBox {
+      font-size: 1.55rem;
+      font-weight: 700;
+      min-height: 36px;
+      color: var(--green);
+      text-shadow: 0 0 14px rgba(0, 255, 157, 0.4);
+      white-space: pre-wrap;
+    }
+    .console-actions { display: flex; gap: 8px; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="logo-wrap">
+      <div class="holo-core"></div>
+      <div>
+        <div class="title">HANDOGRAM</div>
+        <div class="subtitle-tag">SPATIAL GESTURE & VISION OS</div>
+      </div>
+    </div>
+
+    <div class="mode-switcher">
+      <button class="mode-btn active" id="m0" onclick="setMode(0)">✍️ DUAL-HAND CANVAS</button>
+      <button class="mode-btn" id="m1" onclick="setMode(1)">⌨️ HOLO KEYBOARD</button>
+      <button class="mode-btn" id="m2" onclick="setMode(2)">🖱️ AIR-MOUSE</button>
+    </div>
+
+    <div class="telemetry-bar">
+      <div class="pill" id="handsPill">HANDS: 0</div>
+      <div class="pill" id="zoomPill">SCALE: 1.00x</div>
+      <div class="pill" id="fpsPill">FPS: 0</div>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <div class="viewport">
+      <div class="scanline"></div>
+      <div class="bracket tl"></div>
+      <div class="bracket tr"></div>
+      <div class="bracket bl"></div>
+      <div class="bracket br"></div>
+      <div class="floating-hud-tag" id="hudStatus">HANDOGRAM ONLINE // STANDBY</div>
+      <img src="/video_feed" alt="Handogram Live Vision Feed" />
+    </div>
+
+    <div class="deck">
+      <div class="card">
+        <div class="card-header">
+          <span>AIR INK COLOR (OR 👌 PINCH)</span>
+          <span id="inkName">NEON CYAN</span>
+        </div>
+        <div class="swatches">
+          <div class="dot" style="background:#00ffff" onclick="ctrl('set_ink', 0)"></div>
+          <div class="dot" style="background:#ffd700" onclick="ctrl('set_ink', 1)"></div>
+          <div class="dot" style="background:#ff00b4" onclick="ctrl('set_ink', 2)"></div>
+          <div class="dot" style="background:#32ff32" onclick="ctrl('set_ink', 3)"></div>
+          <div class="dot" style="background:#ff3c3c" onclick="ctrl('set_ink', 4)"></div>
+          <div class="dot" style="background:#ffffff" onclick="ctrl('set_ink', 5)"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span>TRANSCRIPT TEXT COLOR (OR 🤘)</span>
+          <span id="txtColName">MINT NEON</span>
+        </div>
+        <div class="swatches">
+          <div class="dot" style="background:#00ff9d" onclick="ctrl('set_text_color', 0)"></div>
+          <div class="dot" style="background:#00e5ff" onclick="ctrl('set_text_color', 1)"></div>
+          <div class="dot" style="background:#ffd700" onclick="ctrl('set_text_color', 2)"></div>
+          <div class="dot" style="background:#ff2a85" onclick="ctrl('set_text_color', 3)"></div>
+          <div class="dot" style="background:#ffffff" onclick="ctrl('set_text_color', 4)"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span>FLOWCHART & EXPORT ENGINE</span>
+        </div>
+        <div class="grid-2">
+          <button class="cyber-btn gold on" id="shapeBtn" onclick="ctrl('toggle_shape', 0)">🔷 Shape Snap: ON</button>
+          <button class="cyber-btn" onclick="ctrl('analyze', 0)">🤖 AI Read Now</button>
+          <button class="cyber-btn" onclick="window.location='/export/png'">🖼️ Export PNG</button>
+          <button class="cyber-btn" onclick="window.location='/export/svg'">📐 Export SVG</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span>5-FINGER SKELETON THEME</span>
+          <span id="skelName">CYBER-PRISM</span>
+        </div>
+        <div class="grid-2">
+          <button class="cyber-btn" onclick="ctrl('set_skel', 0)">Cyber-Prism</button>
+          <button class="cyber-btn" onclick="ctrl('set_skel', 1)">Solar Gold</button>
+          <button class="cyber-btn" onclick="ctrl('set_skel', 2)">Overdrive</button>
+          <button class="cyber-btn" onclick="ctrl('set_skel', 3)">Plasma Blue</button>
+        </div>
+      </div>
+
+      <div class="card guide">
+        <div class="card-header"><span>HANDOGRAM GESTURE MATRIX</span></div>
+        <div>☝️ <span>Right Index:</span> Draw New Object</div>
+        <div>🤏 <span>Left Pinch + Drag:</span> Move Target Object</div>
+        <div>🙌 <span>Both Hands Pinch:</span> Scale Object</div>
+        <div>✌️ <span>Peace Sign:</span> Lock Object & Snap Shape</div>
+        <div>✊ <span>Fist:</span> Local AI OCR & Auto-Type</div>
+        <div>🤙 <span>Hold Shaka (1s):</span> Safe Wipe Board</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="console">
+    <div class="console-left">
+      <div class="console-title">HANDOGRAM NEURAL TRANSCRIPT & KEYBOARD BUFFER</div>
+      <div id="transcriptBox"></div>
+    </div>
+    <div class="console-actions">
+      <button class="cyber-btn" onclick="copyOut()">📋 Copy</button>
+      <button class="cyber-btn danger" onclick="ctrl('clear_text', 0)">🧹 Clear Text</button>
+      <button class="cyber-btn danger" onclick="ctrl('clear', 0)">🗑️ Wipe Board</button>
+    </div>
+  </div>
+
+  <script>
+    let lastSoundId = 0;
+
+    function playHoloClick() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(980, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.06);
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.065);
+      } catch (e) {}
+    }
+
+    async function ctrl(action, value = 0) {
+      playHoloClick();
+      await fetch('/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, value })
+      });
+    }
+
+    function setMode(idx) {
+      ctrl('set_mode', idx);
+      [0, 1, 2].forEach(i => {
+        document.getElementById('m' + i).classList.toggle('active', i === idx);
+      });
+    }
+
+    function copyOut() {
+      playHoloClick();
+      navigator.clipboard.writeText(document.getElementById('transcriptBox').innerText);
+    }
+
+    setInterval(async () => {
+      try {
+        const res = await fetch('/status');
+        const d = await res.json();
+
+        document.getElementById('hudStatus').innerText = d.status_text;
+        document.getElementById('handsPill').innerText = `HANDS: ${d.hands_detected}`;
+        document.getElementById('zoomPill').innerText = `SCALE: ${d.scale.toFixed(2)}x`;
+        document.getElementById('fpsPill').innerText = `FPS: ${d.fps}`;
+        document.getElementById('inkName').innerText = d.ink.name;
+        document.getElementById('txtColName').innerText = d.text_color.name;
+        document.getElementById('skelName').innerText = d.skeleton;
+
+        const sb = document.getElementById('shapeBtn');
+        sb.innerText = d.shape_snap ? "🔷 Shape Snap: ON" : "🔷 Shape Snap: OFF";
+        sb.classList.toggle('on', d.shape_snap);
+
+        const tb = document.getElementById('transcriptBox');
+        tb.innerText = d.recognized_text || "Ready for spatial input...";
+        tb.style.color = d.is_analyzing ? "#ffbe0b" : d.text_color.hex;
+        tb.style.textShadow = `0 0 14px ${d.text_color.hex}66`;
+
+        if (d.key_sound_trigger !== lastSoundId) {
+          lastSoundId = d.key_sound_trigger;
+          playHoloClick();
+        }
+      } catch (e) {}
+    }, 200);
+  </script>
+</body>
+</html>
